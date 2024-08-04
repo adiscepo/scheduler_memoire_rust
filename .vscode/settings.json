@@ -1,0 +1,13 @@
+{
+    "rust-analyzer.cargo.target": "thumbv6m-none-eabi",
+    "rust-analyzer.checkOnSave.allTargets": false,
+    "editor.formatOnSave": true,
+    "cortex-debug.variableUseNaturalFormat": false,
+    "files.associations": {
+        "assert.h": "c",
+        "scheduler.h": "c",
+        "stdio.h": "c",
+        "stdint.h": "c",
+        "config.h": "c"
+    }
+}

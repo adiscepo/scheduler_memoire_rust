@@ -1,0 +1,117 @@
+// The format of this file is specified in https://probe.rs/docs/tools/vscode/#start-a-debug-session-with-minimum-configuration
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "preLaunchTask": "rust: cargo build",
+            "type": "probe-rs-debug",
+            "request": "launch",
+            "name": "probe-rs-debug",
+            "cwd": "${workspaceFolder}",
+            "chip": "rp2040",
+            // RP2040 doesn't support connectUnderReset
+            "connectUnderReset": false,
+            "speed": 4000,
+            "runtimeExecutable": "probe-rs-debugger",
+            "runtimeArgs": [
+                "debug"
+            ],
+            "flashingConfig": {
+                "flashingEnabled": true,
+                "resetAfterFlashing": true,
+                "haltAfterReset": true,
+            },
+            "coreConfigs": [
+                {
+                    "coreIndex": 0,
+                    "programBinary": "target/thumbv6m-none-eabi/debug/blink-pico-rs",
+                    "chip": "RP2040",
+                    // https://github.com/raspberrypi/pico-sdk/raw/1.3.1/src/rp2040/hardware_regs/rp2040.svd
+                    "svdFile": "${workspaceFolder}/.vscode/rp2040.svd",
+                    "rttEnabled": true,
+                    "options": {
+                        "env": {
+                            "DEFMT_LOG": "debug"
+                        }
+                    },
+                }
+            ],
+            "consoleLogLevel": "Info", //Error, Warn, Info, Debug, Trace
+            "wireProtocol": "Swd"
+        },
+        {
+            "preLaunchTask": "rust: cargo build",
+            "name": "Cortex Debug CMSIS-DAP",
+            "cwd": "${workspaceRoot}",
+            // "executable": "${command:cmake.launchTargetPath}",
+            "executable": "${workspaceFolder}/target/thumbv6m-none-eabi/debug/blink-pico-rs",
+            "request": "launch",
+            "type": "cortex-debug",
+            "servertype": "openocd",
+            // "gdbPath": "gdb-multiarch",
+            "gdbPath": "arm-none-eabi-gdb",
+            "device": "RP2040",
+            "configFiles": [
+                "interface/cmsis-dap.cfg",
+                "target/rp2040.cfg"
+            ],
+            "svdFile": "${workspaceRoot}/.vscode/rp2040.svd",
+            "runToEntryPoint": "main",
+            "runToMain": true,
+            "preLaunchCommands": [
+                "monitor init",
+                "monitor reset init",
+                "monitor halt",
+                "monitor arm semihosting enable",
+                "monitor arm semihosting_fileio enable",
+            ],
+            // Work around for stopping at main on restart
+            "postRestartCommands": [
+                "break main",
+                "continue"
+            ],
+            "openOCDLaunchCommands": [
+                "adapter speed 5000",
+            ]
+        },
+        {
+            "preLaunchTask": "rust: cargo build",
+            "name": "External OpenOCD",
+            "request": "launch",
+            "type": "cortex-debug",
+            "cwd": "${workspaceRoot}",
+            "executable": "${workspaceFolder}/target/thumbv6m-none-eabi/debug/blink-pico-rs",
+            "preLaunchTask": "Build binary",
+            "servertype": "external",
+            "gdbPath": "arm-none-eabi-gdb",
+            // Connect to an already running OpenOCD instance
+            // openocd -f interface/cmsis-dap.cfg -f target/rp2040.cfg -s tcl -c "adapter speed 5000"
+            "gdbTarget": "localhost:3333",
+            "svdFile": "${workspaceRoot}/.vscode/rp2040.svd",
+            "runToEntryPoint": "main",
+            "runToMain": true,
+            "preLaunchCommands": [
+                "monitor init",
+                "monitor reset init",
+                "monitor halt",
+                "monitor arm semihosting enable",
+                // "monitor arm semihosting_fileio enable",
+                "target extended-remote :3333",
+                "set print asm-demangle on",
+                "set backtrace limit 32",
+                // "break DefaultHandler",
+                // "break HardFault",
+                "break main",
+                // "load",
+                // "stepi",
+            ],
+            // Work around for stopping at main on restart
+            "postRestartCommands": [
+                "break DefaultHandler",
+                "break HardFault",
+                "break main",
+                "continue"
+            ],
+        }
+    ]
+}

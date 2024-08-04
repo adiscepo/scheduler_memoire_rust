@@ -1,0 +1,40 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558 
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "rust: cargo build",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "build"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "Build binary",
+            "type": "shell",
+            "command": "arm-none-eabi-objcopy",
+            "args": [
+                "--output-target",
+                "binary",
+                // Reads from an ELF binary file
+                "./target/thumbv6m-none-eabi/debug/blink-pico-rs",
+                // Outputs a raw binary file
+                "./target/thumbv6m-none-eabi/debug/blink-pico-rs.bin"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": "Cargo build"
+        }
+    ]
+}
