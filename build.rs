@@ -33,4 +33,5 @@ fn main() {
     cc::Build::new()
         .file("src/assembly.s")
         .compile("assembly-code");
+    println!("cargo:rerun-if-changed=src/assembly.s");
 }

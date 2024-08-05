@@ -1,4 +1,5 @@
 use cortex_m::asm;
+use cortex_m_rt::exception;
 use cortex_m_semihosting::hprintln;
 use rp2040_hal::pac;
 use rp_pico::hal::pac::interrupt;
@@ -19,6 +20,7 @@ pub enum State {
 }
 
 // #[derive(Default)]
+#[repr(C)]
 #[derive(Copy, Clone)]
 pub struct Process {
     tos: *mut u32,
@@ -30,6 +32,7 @@ pub struct Process {
     state: State,
 }
 
+#[repr(C)]
 pub struct Scheduler {
     pub current_process: usize,
     pub processes: [Process; MAX_PROCESSES + 1],
@@ -66,9 +69,9 @@ impl Scheduler {
     pub unsafe fn init_scheduler(&mut self) {
         cortex_m::interrupt::disable();
 
-        setup_systick(); // Active Systick
-        pac::NVIC::unmask(pac::Interrupt::IO_IRQ_BANK0); // Active l'interruption de fin de tâche
-                                                         // Défini le processus d'idle
+        // setup_systick(); // Active Systick
+        // pac::NVIC::unmask(pac::Interrupt::IO_IRQ_BANK0); // Active l'interruption de fin de tâche
+        // Défini le processus d'idle
         let idle_process = &mut self.processes[MAX_PROCESSES];
         idle_process.stack[PROCESS_STACK_SIZE - 1] = 0x01000000;
         idle_process.stack[PROCESS_STACK_SIZE - 2] = idle as u32;
