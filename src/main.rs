@@ -99,10 +99,6 @@ use rp2040_hal::rom_data::double_funcs::uint64_to_double;
 use rp_pico::entry;
 use scheduler::scheduler;
 
-extern "C" {
-    fn isr_systick();
-}
-
 #[entry]
 fn main() -> ! {
     let p = Peripherals::take().unwrap();
@@ -126,9 +122,9 @@ fn main() -> ! {
 fn task_0() {
     hprint!("TASK 0 begin").unwrap();
     let mut i: u32 = 0;
-    while i < 10000000 {
+    while i < 1000000 {
         i += 1;
-        if i % 1000000 == 0 {
+        if i % 100000 == 0 {
             hprint!("TASK0 {}", i).unwrap();
         }
     }

@@ -1,8 +1,10 @@
+use core::{arch::asm, u32};
+
 use cortex_m::asm;
 use cortex_m_rt::exception;
-use cortex_m_semihosting::hprintln;
+use cortex_m_semihosting::{hprintln, nr::READ};
 use rp2040_hal::pac;
-use rp_pico::hal::pac::interrupt;
+use rp_pico::{hal::pac::interrupt, pac::ppb::aircr::ENDIANESS_R};
 
 const PROCESS_STACK_SIZE: usize = 1024; // 1Kb
 const MAX_PROCESSES: usize = 10;
@@ -57,11 +59,6 @@ pub static mut scheduler: Scheduler = Scheduler {
 };
 
 extern "C" {
-    pub fn setup_systick();
-    pub fn start_scheduler();
-    pub fn isr_pendsv();
-    pub fn isr_systick();
-    pub fn set_process_idle();
     pub fn end_set_task();
 }
 
@@ -86,7 +83,7 @@ impl Scheduler {
         cortex_m::interrupt::enable();
     }
 
-    pub fn create_process(&mut self, deadline: u32, fn_ptr: fn()) -> bool {
+    pub fn create_process(&mut self, deadline: u32, fn_ptr: unsafe fn()) -> bool {
         let mut available_process: Option<usize> = None;
 
         // Recherche d'un processus disponible
@@ -119,7 +116,7 @@ impl Scheduler {
         new_process.stack[PROCESS_STACK_SIZE - 10] = 0x10101010;
         new_process.stack[PROCESS_STACK_SIZE - 11] = 0x99999999;
         new_process.stack[PROCESS_STACK_SIZE - 12] = 0x88888888;
-        new_process.stack[PROCESS_STACK_SIZE - 13] = 0x77777777;
+        new_process.stack[PROCESS_STACK_SIZE - 13] = 0xdeadbeef;
         new_process.stack[PROCESS_STACK_SIZE - 14] = 0x66666666;
         new_process.stack[PROCESS_STACK_SIZE - 15] = 0x55555555;
         new_process.stack[PROCESS_STACK_SIZE - 16] = 0x44444444;
@@ -135,12 +132,75 @@ impl Scheduler {
 }
 
 #[no_mangle]
-fn schedule() -> usize {
-    if unsafe { scheduler.current_process } == 1 {
-        1
+unsafe fn schedule() -> usize {
+    cortex_m::interrupt::disable();
+    if scheduler.delay == 0 {
+        scheduler.delay = 0; // TODO: modif qd le get_absolute_time fonctionnera
     } else {
-        0
+        // Print des logs
     }
+    let mut pid: usize = MAX_PROCESSES;
+    let mut earliest_deadline: u32 = u32::MAX;
+    let now = u32::MAX; // TODO: modif idem
+
+    for i in 0..MAX_PROCESSES {
+        let process = &mut scheduler.processes[i];
+
+        if process.state == State::UNDEFINED {
+            continue;
+        }
+
+        if process.state == State::ENDED {
+            process.stack[PROCESS_STACK_SIZE - 1] = 0x01000000;
+            process.stack[PROCESS_STACK_SIZE - 2] = process.fn_ptr as u32;
+            process.stack[PROCESS_STACK_SIZE - 3] = end_task as u32;
+            process.stack[PROCESS_STACK_SIZE - 4] = 0x12121212;
+            process.stack[PROCESS_STACK_SIZE - 5] = 0x33333333; // R3
+            process.stack[PROCESS_STACK_SIZE - 6] = 0x22222222; // R2
+            process.stack[PROCESS_STACK_SIZE - 7] = 0x11111111; // R1
+            process.stack[PROCESS_STACK_SIZE - 8] = 0x00000000; // R0
+            process.stack[PROCESS_STACK_SIZE - 9] = 0x11111111; // R11
+            process.stack[PROCESS_STACK_SIZE - 10] = 0x10101010; // R10
+            process.stack[PROCESS_STACK_SIZE - 11] = 0x99999999; // R9
+            process.stack[PROCESS_STACK_SIZE - 12] = 0x88888888; // R8
+            process.stack[PROCESS_STACK_SIZE - 13] = 0x77777777; // R7
+            process.stack[PROCESS_STACK_SIZE - 14] = 0x66666666; // R6
+            process.stack[PROCESS_STACK_SIZE - 15] = 0x55555555; // R5
+            process.stack[PROCESS_STACK_SIZE - 16] = 0x44444444; // R4
+            process.tos = process.stack.as_mut_ptr().add(PROCESS_STACK_SIZE - 16);
+
+            process.state = State::DEFINED;
+            process.release_time = process.absolute_deadline;
+            process.absolute_deadline = process.release_time + process.deadline;
+        }
+
+        if process.state == State::DEFINED || process.state == State::FAILED {
+            if process.release_time < now {
+                process.state = State::READY;
+            }
+        }
+
+        if process.state == State::RUNNING {
+            process.state = State::PREEMPTED;
+        }
+
+        if process.state == State::READY
+            || process.state == State::RUNNING
+            || process.state == State::PREEMPTED
+        {
+            if process.absolute_deadline < earliest_deadline {
+                pid = i;
+                earliest_deadline = process.absolute_deadline;
+            }
+        }
+    }
+    if pid != MAX_PROCESSES {
+        scheduler.processes[pid].state = State::RUNNING;
+    }
+    scheduler.current_process = pid;
+    // if (pid == MAX_PROCESSES) // LOG
+    cortex_m::interrupt::enable();
+    pid
 }
 
 #[no_mangle]
@@ -150,12 +210,15 @@ fn irq_set_enabled() {
     }
 }
 
-fn end_task() {
+unsafe fn end_task() {
     cortex_m::interrupt::disable();
-    let _pid: usize = unsafe { scheduler.current_process };
-    // let ended_proc = &unsafe { scheduler.processes }[pid];
-    unsafe {
-        cortex_m::interrupt::enable();
+    let pid: usize = unsafe { scheduler.current_process };
+    let ended_proc = &mut scheduler.processes[pid];
+    ended_proc.state = State::ENDED;
+    cortex_m::interrupt::enable();
+    end_set_task();
+    loop {
+        asm!("WFI");
     }
 }
 

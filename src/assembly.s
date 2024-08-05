@@ -230,6 +230,13 @@ set_process_idle:
 .type end_set_task, %function
 end_set_task:
 
+    msr psp, r2             // Place le pointeur de la pile de tâche en tant que psp
+    isb
+    mrs r0, control
+    ldr r0, =0x0          // Défini le 2ème bit de CONTROL à 1 -> Passe en mode thread 
+    msr control, r0
+    isb
+
     ldr r1, =scheduler      // On récupère l'ordonnanceur
     ldr r2, [r1]
     ldr r3, =PROCESS_SIZE
