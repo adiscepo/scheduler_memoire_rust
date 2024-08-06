@@ -1,10 +1,11 @@
 use core::{arch::asm, u32};
 
+use crate::timer::timer;
 use cortex_m::asm;
-use cortex_m_rt::exception;
-use cortex_m_semihosting::{hprintln, nr::READ};
-use rp2040_hal::pac;
-use rp_pico::{hal::pac::interrupt, pac::ppb::aircr::ENDIANESS_R};
+use cortex_m::peripheral::syst::SystClkSource;
+use cortex_m::Peripherals;
+use cortex_m_semihosting::hprintln;
+use rp_pico::pac;
 
 const PROCESS_STACK_SIZE: usize = 1024; // 1Kb
 const MAX_PROCESSES: usize = 10;
@@ -38,8 +39,7 @@ pub struct Process {
 pub struct Scheduler {
     pub current_process: usize,
     pub processes: [Process; MAX_PROCESSES + 1],
-    pub timer: u32,
-    pub delay: u32,
+    pub timer: bool,
 }
 
 #[no_mangle] // Permet d'être utilisé en assembleur
@@ -54,21 +54,31 @@ pub static mut scheduler: Scheduler = Scheduler {
         fn_ptr: core::ptr::null_mut(),
         state: State::UNDEFINED,
     }; MAX_PROCESSES + 1],
-    timer: 0,
-    delay: 0,
+    timer: false,
 };
 
 extern "C" {
-    pub fn end_set_task();
+    pub fn start_scheduler();
+}
+
+fn setup_systick() {
+    let p = Peripherals::take().unwrap();
+    let mut syst = p.SYST;
+
+    // configures the system timer to trigger a SysTick exception every second
+    syst.set_clock_source(SystClkSource::Core);
+    syst.set_reload((0x00ffffff - 1) as u32);
+    syst.enable_counter();
+    syst.enable_interrupt();
 }
 
 impl Scheduler {
     pub unsafe fn init_scheduler(&mut self) {
         cortex_m::interrupt::disable();
 
-        // setup_systick(); // Active Systick
-        // pac::NVIC::unmask(pac::Interrupt::IO_IRQ_BANK0); // Active l'interruption de fin de tâche
-        // Défini le processus d'idle
+        setup_systick(); // Active Systick
+        irq_create(); // Active l'interruption de fin de tâche
+                      // Défini le processus d'idle
         let idle_process = &mut self.processes[MAX_PROCESSES];
         idle_process.stack[PROCESS_STACK_SIZE - 1] = 0x01000000;
         idle_process.stack[PROCESS_STACK_SIZE - 2] = idle as u32;
@@ -134,14 +144,14 @@ impl Scheduler {
 #[no_mangle]
 unsafe fn schedule() -> usize {
     cortex_m::interrupt::disable();
-    if scheduler.delay == 0 {
-        scheduler.delay = 0; // TODO: modif qd le get_absolute_time fonctionnera
-    } else {
-        // Print des logs
+    if !scheduler.timer {
+        timer::init_timer(1); // On initialise le timer (intervalle de 1ms) la première fois que le scheduler est appelé (la première tâche est appelée par un changement de contexte)
+        scheduler.timer = true;
     }
     let mut pid: usize = MAX_PROCESSES;
     let mut earliest_deadline: u32 = u32::MAX;
-    let now = u32::MAX; // TODO: modif idem
+    let now = timer::get_elapsed_time(); // TODO: modif idem
+                                         // let now = u32::MAX; // TODO: modif idem
 
     for i in 0..MAX_PROCESSES {
         let process = &mut scheduler.processes[i];
@@ -204,10 +214,15 @@ unsafe fn schedule() -> usize {
 }
 
 #[no_mangle]
-fn irq_set_enabled() {
+fn irq_create() {
     unsafe {
         pac::NVIC::unmask(pac::Interrupt::IO_IRQ_BANK0);
     }
+}
+
+#[no_mangle]
+fn irq_set_enabled() {
+    pac::NVIC::pend(pac::Interrupt::IO_IRQ_BANK0);
 }
 
 unsafe fn end_task() {
@@ -216,7 +231,7 @@ unsafe fn end_task() {
     let ended_proc = &mut scheduler.processes[pid];
     ended_proc.state = State::ENDED;
     cortex_m::interrupt::enable();
-    end_set_task();
+    irq_set_enabled();
     loop {
         asm!("WFI");
     }
@@ -226,9 +241,4 @@ fn idle() {
     loop {
         asm::nop();
     }
-}
-
-#[interrupt]
-fn IO_IRQ_BANK0() {
-    hprintln!("Interruption").unwrap();
 }

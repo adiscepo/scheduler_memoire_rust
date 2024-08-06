@@ -226,16 +226,10 @@ set_process_idle:
     cpsie i
     bx lr
 
-.global end_set_task
-.type end_set_task, %function
-end_set_task:
-
-    msr psp, r2             // Place le pointeur de la pile de tâche en tant que psp
-    isb
-    mrs r0, control
-    ldr r0, =0x0          // Défini le 2ème bit de CONTROL à 1 -> Passe en mode thread 
-    msr control, r0
-    isb
+// end_set_task
+.global IO_IRQ_BANK0
+.type IO_IRQ_BANK0, %function
+IO_IRQ_BANK0:
 
     ldr r1, =scheduler      // On récupère l'ordonnanceur
     ldr r2, [r1]
@@ -266,9 +260,9 @@ end_set_task:
     adds r0, #16
 
     msr psp, r0         // On remet la pile de la tâche
-    ldr r0, =END_TASK_IRQ       // Premier paramètre de la fonction pour activer la fin de tâche : id de la tâche
-    ldr r1, =#0                 // Second paramètre : true
-    bl irq_set_enabled          // Appel à la fonction
+    @ ldr r0, =END_TASK_IRQ       // Premier paramètre de la fonction pour activer la fin de tâche : id de la tâche
+    @ ldr r1, =#0                 // Second paramètre : true
+    bl irq_create          // Appel à la fonction
     CPSIE I
     
     ldr r0, =0xfffffffd         // Fin d'interruption

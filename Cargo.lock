@@ -18,12 +18,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bare-metal"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8fe8f5a8a398345e52358e18ff07cc17a568fbca5c6f73873d3a62056309603"
-
-[[package]]
 name = "bitfield"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -41,17 +35,11 @@ version = "0.1.0"
 dependencies = [
  "cc",
  "cortex-m",
- "cortex-m-interrupt",
  "cortex-m-rt",
  "cortex-m-semihosting",
- "defmt",
- "defmt-rtt",
- "embedded-hal",
  "fugit",
  "panic-halt",
- "panic-probe",
  "rp-pico",
- "rp2040-hal 0.6.1",
 ]
 
 [[package]]
@@ -66,33 +54,10 @@ version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ec610d8f49840a5b376c69663b6369e71f4b34484b9b2eb29fb918d92516cb9"
 dependencies = [
- "bare-metal 0.2.5",
+ "bare-metal",
  "bitfield",
  "embedded-hal",
  "volatile-register",
-]
-
-[[package]]
-name = "cortex-m-interrupt"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eecfdb6a57f69708ed50cc70f22e42585d667e44b66fa67d8053231dbaf06d2f"
-dependencies = [
- "cortex-m",
- "cortex-m-interrupt-macro",
- "cortex-m-rt",
-]
-
-[[package]]
-name = "cortex-m-interrupt-macro"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33f4f118b7d9abde70bfb02e202afb2851ef59bada2de1632c56e266754b0b11"
-dependencies = [
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -126,21 +91,11 @@ dependencies = [
 
 [[package]]
 name = "crc-any"
-version = "2.4.3"
+version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "774646b687f63643eb0f4bf13dc263cb581c8c9e57973b6ddf78bda3994d88df"
+checksum = "a62ec9ff5f7965e4d7280bd5482acd20aadb50d632cf6c1d74493856b011fa73"
 dependencies = [
  "debug-helper",
-]
-
-[[package]]
-name = "critical-section"
-version = "0.2.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1706d332edc22aef4d9f23a6bb1c92360a403013c291af51247a737472dcae6"
-dependencies = [
- "bare-metal 1.0.0",
- "critical-section 1.1.1",
 ]
 
 [[package]]
@@ -185,16 +140,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "269924c02afd7f94bc4cecbfa5c379f6ffcf9766b3408fe63d22c728654eccd0"
 dependencies = [
  "thiserror",
-]
-
-[[package]]
-name = "defmt-rtt"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "609923761264dd99ed9c7d209718cda4631c5fe84668e0f0960124cbb844c49f"
-dependencies = [
- "critical-section 1.1.1",
- "defmt",
 ]
 
 [[package]]
@@ -289,16 +234,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de96540e0ebde571dc55c73d60ef407c653844e6f9a1e2fdbd40c07b9252d812"
 
 [[package]]
-name = "panic-probe"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa6fa5645ef5a760cd340eaa92af9c1ce131c8c09e7f8926d8a24b59d26652b9"
-dependencies = [
- "cortex-m",
- "defmt",
-]
-
-[[package]]
 name = "paste"
 version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -373,7 +308,7 @@ dependencies = [
  "cortex-m-rt",
  "fugit",
  "rp2040-boot2",
- "rp2040-hal 0.8.2",
+ "rp2040-hal",
  "usb-device",
 ]
 
@@ -388,36 +323,12 @@ dependencies = [
 
 [[package]]
 name = "rp2040-hal"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87ffe7adb7d1fc14cc30aadaac0e5c573c554ffd788cc83a9bcb97399720f9f5"
-dependencies = [
- "cortex-m",
- "cortex-m-rt",
- "critical-section 0.2.8",
- "critical-section 1.1.1",
- "embedded-hal",
- "fugit",
- "itertools",
- "nb 1.1.0",
- "paste",
- "pio",
- "rand_core",
- "rp2040-hal-macros",
- "rp2040-pac 0.3.0",
- "usb-device",
- "vcell",
- "void",
-]
-
-[[package]]
-name = "rp2040-hal"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1369bb84862d7f69391a96606b2f29a00bfce7f29a749e23d5f01fc3f607ada0"
 dependencies = [
  "cortex-m",
- "critical-section 1.1.1",
+ "critical-section",
  "embedded-dma",
  "embedded-hal",
  "fugit",
@@ -427,7 +338,7 @@ dependencies = [
  "pio",
  "rand_core",
  "rp2040-hal-macros",
- "rp2040-pac 0.4.0",
+ "rp2040-pac",
  "usb-device",
  "vcell",
  "void",
@@ -443,17 +354,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "rp2040-pac"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13a6106d5db01c7171a39c1f7696780912db9b42fe7ac722db60069c8904ea7c"
-dependencies = [
- "cortex-m",
- "cortex-m-rt",
- "vcell",
 ]
 
 [[package]]
