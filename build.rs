@@ -34,4 +34,7 @@ fn main() {
         .file("src/assembly.s")
         .compile("assembly-code");
     println!("cargo:rerun-if-changed=src/assembly.s");
+
+    // Fichier de tâches C
+    // cc::Build::new().file("src/tasks.c").compile("foo");
 }

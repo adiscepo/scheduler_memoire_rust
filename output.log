@@ -1,0 +1,18 @@
+Info : Listening on port 6666 for tcl connections
+Info : Listening on port 4444 for telnet connections
+Info : Using CMSIS-DAPv2 interface with VID:PID=0x2e8a:0x000c, serial=E66038B713996B39
+Info : CMSIS-DAP: SWD  Supported
+Info : CMSIS-DAP: FW Version = 2.0.0
+Info : CMSIS-DAP: Interface Initialised (SWD)
+Info : SWCLK/TCK = 0 SWDIO/TMS = 0 TDI = 0 TDO = 0 nTRST = 0 nRESET = 0
+Info : CMSIS-DAP: Interface ready
+Info : clock speed 5000 kHz
+Info : SWD DPIDR 0x0bc12477
+Info : SWD DLPIDR 0x00000001
+Info : SWD DPIDR 0x0bc12477
+Info : SWD DLPIDR 0x10000001
+Info : rp2040.core0: hardware has 4 breakpoints, 2 watchpoints
+Info : rp2040.core1: hardware has 4 breakpoints, 2 watchpoints
+Info : starting gdb server for rp2040.core0 on 3333
+Info : Listening on port 3333 for gdb connections
+shutdown command invoked

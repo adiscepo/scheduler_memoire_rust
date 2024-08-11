@@ -37,6 +37,7 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
  "cortex-m-semihosting",
+ "embedded-hal",
  "fugit",
  "panic-halt",
  "rp-pico",

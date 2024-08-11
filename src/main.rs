@@ -4,41 +4,153 @@
 mod scheduler;
 mod timer;
 use crate::scheduler::scheduler::{scheduler as Scheduler, start_scheduler};
-use cortex_m_semihosting::hprint;
+use core::ptr;
+use embedded_hal::digital::v2::OutputPin;
 use panic_halt as _;
-use rp_pico::entry;
+use rp_pico::{
+    entry,
+    hal::{
+        self,
+        gpio::{
+            bank0::{Gpio10, Gpio11, Gpio12},
+            Pin, PushPullOutput,
+        },
+        Sio,
+    },
+    pac,
+};
+
+use cortex_m_semihosting::hprint;
+use timer::timer::{get_elapsed_time_since_boot, to_ms};
+
+static mut LED_PIN_T0: Option<Pin<Gpio10, PushPullOutput>> = None;
+static mut LED_PIN_T1: Option<Pin<Gpio11, PushPullOutput>> = None;
+static mut LED_PIN_T2: Option<Pin<Gpio12, PushPullOutput>> = None;
 
 #[entry]
 fn main() -> ! {
+    let mut pac = pac::Peripherals::take().unwrap();
+    let sio = Sio::new(pac.SIO);
+
+    let pins = hal::gpio::Pins::new(
+        pac.IO_BANK0,
+        pac.PADS_BANK0,
+        sio.gpio_bank0,
+        &mut pac.RESETS,
+    );
+
+    // Initialisation des LED pins, stockées dans des variables statiques
+    unsafe {
+        LED_PIN_T0 = Some(pins.gpio10.into_push_pull_output());
+        LED_PIN_T1 = Some(pins.gpio11.into_push_pull_output());
+        LED_PIN_T2 = Some(pins.gpio12.into_push_pull_output());
+    }
+
     unsafe {
         Scheduler.init_scheduler();
-        Scheduler.create_process(2000, task_0);
-        Scheduler.create_process(2000, task_1);
+        Scheduler.create_process(2000, task0);
+        Scheduler.create_process(1000, task1);
+        Scheduler.create_process(500, task2);
+        conditional_hprint!("Task: {}", Scheduler.current_process);
         start_scheduler();
     }
     loop {}
 }
 
-fn task_0() {
-    hprint!("TASK 0 begin").unwrap();
-    let mut i: u32 = 0;
-    while i < 1000000 {
-        i += 1;
-        if i % 100000 == 0 {
-            hprint!("TASK0 {}", i).unwrap();
+fn task0() {
+    unsafe {
+        conditional_hprint!(
+            "D 0 {}",
+            to_ms(get_elapsed_time_since_boot()) - Scheduler.delay
+        );
+        if let Some(led_pin) = LED_PIN_T0.as_mut() {
+            led_pin.set_high().unwrap();
         }
     }
-    hprint!("TASK 0 end").unwrap();
+
+    let mut i: u32 = 0;
+    while i < 10_000_000 {
+        unsafe {
+            ptr::write_volatile(&mut i, i + 1);
+        }
+        if i % 100_000 == 0 {
+            conditional_hprint!("Task 0");
+        }
+    }
+
+    unsafe {
+        if let Some(led_pin) = LED_PIN_T0.as_mut() {
+            led_pin.set_low().unwrap();
+        }
+        conditional_hprint!(
+            "F 0 {}",
+            to_ms(get_elapsed_time_since_boot()) - Scheduler.delay
+        );
+    }
 }
 
-fn task_1() {
-    hprint!("TASK 1 begin").unwrap();
-    let mut i: u32 = 0;
-    while i < 1000000 {
-        i += 1;
-        if i % 100000 == 0 {
-            hprint!("TASK1 {}", i).unwrap();
+fn task1() {
+    unsafe {
+        conditional_hprint!(
+            "D 1 {}",
+            to_ms(get_elapsed_time_since_boot()) - Scheduler.delay
+        );
+        if let Some(led_pin) = LED_PIN_T1.as_mut() {
+            led_pin.set_high().unwrap();
         }
     }
-    hprint!("TASK 1 end").unwrap();
+
+    let mut i: u32 = 0;
+    while i < 2_000_000 {
+        unsafe {
+            ptr::write_volatile(&mut i, i + 1);
+        }
+        if i % 100_000 == 0 {
+            conditional_hprint!("Task 1");
+        }
+    }
+
+    unsafe {
+        if let Some(led_pin) = LED_PIN_T1.as_mut() {
+            led_pin.set_low().unwrap();
+        }
+        conditional_hprint!(
+            "F 1 {}",
+            to_ms(get_elapsed_time_since_boot()) - Scheduler.delay
+        );
+    }
+}
+
+fn task2() {
+    unsafe {
+        conditional_hprint!(
+            "D 2 {}",
+            to_ms(get_elapsed_time_since_boot()) - Scheduler.delay
+        );
+        if let Some(led_pin) = LED_PIN_T2.as_mut() {
+            led_pin.set_high().unwrap();
+        } else {
+            conditional_hprint!("NONEOENOENOENOENEONEOONE");
+        }
+    }
+
+    let mut i: u32 = 0;
+    while i < 1_500_000 {
+        unsafe {
+            ptr::write_volatile(&mut i, i + 1);
+        }
+        if i % 100_000 == 0 {
+            conditional_hprint!("Task 2");
+        }
+    }
+
+    unsafe {
+        if let Some(led_pin) = LED_PIN_T2.as_mut() {
+            led_pin.set_low().unwrap();
+        }
+        conditional_hprint!(
+            "F 2 {}",
+            to_ms(get_elapsed_time_since_boot()) - Scheduler.delay
+        );
+    }
 }

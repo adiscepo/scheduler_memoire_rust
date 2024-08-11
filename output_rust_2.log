@@ -1,0 +1,63 @@
+Task: 10
+R 0 0
+R 1 0
+R 2 0
+F 11 0
+D 2 0
+Task 2
+Task 2
+Task 2
+Task 2
+P 2 134
+D 11 134
+F 11 134
+Task 2
+Task 2
+Task 2
+Task 2
+Task 2
+P 2 268
+D 11 268
+F 11 268
+Task 2
+F 2 280
+P 2 280
+D 11 280
+F 11 280
+D 1 280
+Task 1
+Task 1
+Task 1
+Task 1
+P 1 402
+D 11 402
+F 11 402
+Task 1
+Task 1
+Task 1
+Task 1
+Task 1
+P 1 537
+D 11 537
+R 2 537
+F 11 537
+Task 1
+Task 1
+Task 1
+Task 1
+P 1 671
+D 11 671
+F 11 671
+Task 1
+Task 1
+Task 1
+Task 1
+Task 1
+P 1 805
+D 11 805
+F 11 805
+Task 1
+Task 1
+F 1 840
+P 1 840
+D 

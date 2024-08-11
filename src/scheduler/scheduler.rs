@@ -1,14 +1,24 @@
 use core::{arch::asm, u32};
 
-use crate::timer::timer;
+use crate::timer::timer::{self, get_elapsed_time_since_boot, to_ms};
 use cortex_m::asm;
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::Peripherals;
-use cortex_m_semihosting::hprintln;
+use cortex_m_semihosting::hprint;
 use rp_pico::pac;
-
 const PROCESS_STACK_SIZE: usize = 1024; // 1Kb
 const MAX_PROCESSES: usize = 10;
+
+#[macro_export]
+macro_rules! conditional_hprint {
+    ($($arg:tt)*) => {
+        #[cfg(debug_assertions)]
+        {
+            hprint!($($arg)*).unwrap();
+            hprint!("\n").unwrap();
+        }
+    };
+}
 
 #[derive(Copy, Clone, PartialEq)]
 #[repr(u8)]
@@ -39,7 +49,7 @@ pub struct Process {
 pub struct Scheduler {
     pub current_process: usize,
     pub processes: [Process; MAX_PROCESSES + 1],
-    pub timer: bool,
+    pub delay: u32,
 }
 
 #[no_mangle] // Permet d'être utilisé en assembleur
@@ -54,7 +64,7 @@ pub static mut scheduler: Scheduler = Scheduler {
         fn_ptr: core::ptr::null_mut(),
         state: State::UNDEFINED,
     }; MAX_PROCESSES + 1],
-    timer: false,
+    delay: 0,
 };
 
 extern "C" {
@@ -89,7 +99,6 @@ impl Scheduler {
         idle_process.state = State::UNDEFINED;
         self.current_process = MAX_PROCESSES;
 
-        hprintln!("Scheduler created !").unwrap();
         cortex_m::interrupt::enable();
     }
 
@@ -144,14 +153,27 @@ impl Scheduler {
 #[no_mangle]
 unsafe fn schedule() -> usize {
     cortex_m::interrupt::disable();
-    if !scheduler.timer {
-        timer::init_timer(1); // On initialise le timer (intervalle de 1ms) la première fois que le scheduler est appelé (la première tâche est appelée par un changement de contexte)
-        scheduler.timer = true;
+    if scheduler.delay == 0 {
+        scheduler.delay = to_ms(get_elapsed_time_since_boot());
+    } else {
+        conditional_hprint!(
+            "P {} {}",
+            scheduler.current_process,
+            timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
+        );
+        conditional_hprint!(
+            "D {} {}",
+            MAX_PROCESSES + 1,
+            timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
+        );
     }
     let mut pid: usize = MAX_PROCESSES;
     let mut earliest_deadline: u32 = u32::MAX;
-    let now = timer::get_elapsed_time(); // TODO: modif idem
-                                         // let now = u32::MAX; // TODO: modif idem
+    let now = timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay;
+    // conditional_hprint!("NOW : {}", now);
+    if now >= 10000 {
+        asm!("bkpt #0")
+    };
 
     for i in 0..MAX_PROCESSES {
         let process = &mut scheduler.processes[i];
@@ -185,9 +207,24 @@ unsafe fn schedule() -> usize {
         }
 
         if process.state == State::DEFINED || process.state == State::FAILED {
-            if process.release_time < now {
+            if process.release_time <= now {
                 process.state = State::READY;
+                conditional_hprint!(
+                    "R {} {}",
+                    i,
+                    timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
+                );
             }
+        }
+
+        if process.absolute_deadline < now {
+            conditional_hprint!(
+                "M {} {}",
+                i,
+                timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
+            );
+            process.state = State::FAILED;
+            asm!("bkpt #0");
         }
 
         if process.state == State::RUNNING {
@@ -208,7 +245,18 @@ unsafe fn schedule() -> usize {
         scheduler.processes[pid].state = State::RUNNING;
     }
     scheduler.current_process = pid;
-    // if (pid == MAX_PROCESSES) // LOG
+
+    conditional_hprint!(
+        "F {} {}",
+        MAX_PROCESSES + 1,
+        timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
+    );
+    if pid == MAX_PROCESSES {
+        conditional_hprint!(
+            "IDLE {}",
+            timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
+        );
+    }
     cortex_m::interrupt::enable();
     pid
 }

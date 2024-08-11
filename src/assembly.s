@@ -28,34 +28,34 @@
 // J'aurais pu utiliser des fonctions proposées par le sdk du rpi pico (pour définir les
 // exceptions, les valeurs de systick, etc.) mais j'ai préféré les faire en assembleur
 // afin de saisir la substantifique moelle du fonctionnement de la puce
-@ .global setup_systick
-@ .type setup_systick, %function
-@ setup_systick:
-@     cpsid i
+.global setup_systick
+.type setup_systick, %function
+setup_systick:
+    cpsid i
     
-@     ldr  r1, =SYSTICK_BASE  // Charge le registre de gestion de Systick (pg. 78 ref RP2040)
-@     movs r0, #0             // Réinitialise les registres
-@     str  r0, [r1]           // CSR (Control and Status Register)
-@     str  r0, [r1, #4]       // RVR (Reload Value Register)
-@     str  r0, [r1, #8]       // CVR (Current Value Register)
+    ldr  r1, =SYSTICK_BASE  // Charge le registre de gestion de Systick (pg. 78 ref RP2040)
+    movs r0, #0             // Réinitialise les registres
+    str  r0, [r1]           // CSR (Control and Status Register)
+    str  r0, [r1, #4]       // RVR (Reload Value Register)
+    str  r0, [r1, #8]       // CVR (Current Value Register)
     
-@     ldr  r0, =SYSTICK_RELOAD_VALUE
-@     str  r0, [r1, #4]       // Défini la valeur de reload sur SYSTICK_RELOAD_VALUE
+    ldr  r0, =SYSTICK_RELOAD_VALUE
+    str  r0, [r1, #4]       // Défini la valeur de reload sur SYSTICK_RELOAD_VALUE
 
-@     movs r0, #0x07          // Active les bits 0, 1 et 2 du registre CSR (pg. 101 ref ARMCortexM0+)
-@     str  r0, [r1]
+    movs r0, #0x07          // Active les bits 0, 1 et 2 du registre CSR (pg. 101 ref ARMCortexM0+)
+    str  r0, [r1]
 
-@     ldr  r1, =SYSTICK_SHPR3         // Charge l'adresse permettant de gérer les priorités des interruptions
-@     ldr  r2, [r1]
-@     ldr  r0, =SYSTICK_PRIORITY_MASK // Défini le masque de priorité afin de cibler l'interruption Systick
-@     bics r2, r0
-@     movs r0, #SYSTICK_PRIORITY      // Défini la priorité de PendSV à basse (3) et Systick à élevée (0)
-@     lsls r0, r0, 30
-@     orrs r2, r0
-@     str  r2, [r1]
+    ldr  r1, =SYSTICK_SHPR3         // Charge l'adresse permettant de gérer les priorités des interruptions
+    ldr  r2, [r1]
+    ldr  r0, =SYSTICK_PRIORITY_MASK // Défini le masque de priorité afin de cibler l'interruption Systick
+    bics r2, r0
+    movs r0, #SYSTICK_PRIORITY      // Défini la priorité de PendSV à basse (3) et Systick à élevée (0)
+    lsls r0, r0, 30
+    orrs r2, r0
+    str  r2, [r1]
     
-@     cpsie i
-@     bx lr
+    cpsie i
+    bx lr
 
 .global start_scheduler
 .type start_scheduler, %function
