@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "blink-pico-rs"
+name = "scheduler-edf-rs"
 version = "0.1.0"
 
 [dependencies]

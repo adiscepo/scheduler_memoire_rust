@@ -33,7 +33,7 @@ warning: unused imports: `get_elapsed_time_since_boot` and `to_ms`
 warning: 5 warnings emitted
 
 
-blink-pico-rs:	file format elf32-littlearm
+scheduler-edf-rs:	file format elf32-littlearm
 
 Disassembly of section .text:
 

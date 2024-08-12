@@ -23,9 +23,9 @@
                 "--output-target",
                 "binary",
                 // Reads from an ELF binary file
-                "./target/thumbv6m-none-eabi/debug/blink-pico-rs",
+                "./target/thumbv6m-none-eabi/debug/scheduler-edf-rs",
                 // Outputs a raw binary file
-                "./target/thumbv6m-none-eabi/debug/blink-pico-rs.bin"
+                "./target/thumbv6m-none-eabi/debug/scheduler-edf-rs.bin"
             ],
             "problemMatcher": [
                 "$rustc"
