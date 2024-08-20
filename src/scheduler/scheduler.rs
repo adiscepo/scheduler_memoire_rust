@@ -4,21 +4,23 @@ use crate::timer::timer::{self, get_elapsed_time_since_boot, to_ms};
 use cortex_m::asm;
 use cortex_m::peripheral::syst::SystClkSource;
 use cortex_m::Peripherals;
-use cortex_m_semihosting::hprint;
+// use cortex_m_semihosting::hprint;
+use defmt::*;
+use defmt_rtt as _;
 use rp_pico::pac;
 const PROCESS_STACK_SIZE: usize = 1024; // 1Kb
-const MAX_PROCESSES: usize = 10;
+const MAX_PROCESSES: usize = 3;
 
-#[macro_export]
-macro_rules! conditional_hprint {
-    ($($arg:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
-            hprint!($($arg)*).unwrap();
-            hprint!("\n").unwrap();
-        }
-    };
-}
+// #[macro_export]
+// macro_rules! conditional_hprint {
+//     ($($arg:tt)*) => {
+//         #[cfg(debug_assertions)]
+//         {
+//             hprint!($($arg)*).unwrap();
+//             hprint!("\n").unwrap();
+//         }
+//     };
+// }
 
 #[derive(Copy, Clone, PartialEq)]
 #[repr(u8)]
@@ -38,8 +40,8 @@ pub enum State {
 pub struct Process {
     tos: *mut u32,
     stack: [u32; PROCESS_STACK_SIZE],
+    wcet: u32,
     deadline: u32,
-    absolute_deadline: u32,
     release_time: u32,
     fn_ptr: *mut u32,
     state: State,
@@ -58,8 +60,8 @@ pub static mut scheduler: Scheduler = Scheduler {
     processes: [Process {
         tos: core::ptr::null_mut(),
         stack: [0; PROCESS_STACK_SIZE],
+        wcet: 0,
         deadline: 0,
-        absolute_deadline: 0,
         release_time: 0,
         fn_ptr: core::ptr::null_mut(),
         state: State::UNDEFINED,
@@ -94,15 +96,15 @@ impl Scheduler {
         idle_process.stack[PROCESS_STACK_SIZE - 2] = idle as u32;
         idle_process.stack[PROCESS_STACK_SIZE - 3] = end_task as u32;
         idle_process.tos = &mut idle_process.stack[PROCESS_STACK_SIZE - 16];
-        idle_process.absolute_deadline = u32::MAX;
-        idle_process.deadline = 0;
+        idle_process.deadline = u32::MAX;
+        idle_process.wcet = u32::MAX;
         idle_process.state = State::UNDEFINED;
         self.current_process = MAX_PROCESSES;
 
         cortex_m::interrupt::enable();
     }
 
-    pub fn create_process(&mut self, deadline: u32, fn_ptr: unsafe fn()) -> bool {
+    pub fn create_process(&mut self, wcet: u32, fn_ptr: unsafe fn()) -> bool {
         let mut available_process: Option<usize> = None;
 
         // Recherche d'un processus disponible
@@ -141,8 +143,8 @@ impl Scheduler {
         new_process.stack[PROCESS_STACK_SIZE - 16] = 0x44444444;
         new_process.tos = unsafe { new_process.stack.as_mut_ptr().add(PROCESS_STACK_SIZE - 16) }; // Défini le pointeur vers le haut de la pile
 
-        new_process.absolute_deadline = deadline;
-        new_process.deadline = deadline;
+        new_process.deadline = wcet;
+        new_process.wcet = wcet;
         new_process.fn_ptr = fn_ptr as *mut u32;
         new_process.state = State::DEFINED;
 
@@ -156,12 +158,12 @@ unsafe fn schedule() -> usize {
     if scheduler.delay == 0 {
         scheduler.delay = to_ms(get_elapsed_time_since_boot());
     } else {
-        conditional_hprint!(
+        info!(
             "P {} {}",
             scheduler.current_process,
             timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
         );
-        conditional_hprint!(
+        info!(
             "D {} {}",
             MAX_PROCESSES + 1,
             timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
@@ -170,7 +172,7 @@ unsafe fn schedule() -> usize {
     let mut pid: usize = MAX_PROCESSES;
     let mut earliest_deadline: u32 = u32::MAX;
     let now = timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay;
-    // conditional_hprint!("NOW : {}", now);
+    // info!("NOW : {}", now);
     if now >= 10000 {
         asm!("bkpt #0")
     };
@@ -202,14 +204,14 @@ unsafe fn schedule() -> usize {
             process.tos = process.stack.as_mut_ptr().add(PROCESS_STACK_SIZE - 16);
 
             process.state = State::DEFINED;
-            process.release_time = process.absolute_deadline;
-            process.absolute_deadline = process.release_time + process.deadline;
+            process.release_time = process.deadline;
+            process.deadline = process.release_time + process.wcet;
         }
 
         if process.state == State::DEFINED || process.state == State::FAILED {
             if process.release_time <= now {
                 process.state = State::READY;
-                conditional_hprint!(
+                info!(
                     "R {} {}",
                     i,
                     timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
@@ -217,8 +219,8 @@ unsafe fn schedule() -> usize {
             }
         }
 
-        if process.absolute_deadline < now {
-            conditional_hprint!(
+        if process.deadline < now {
+            info!(
                 "M {} {}",
                 i,
                 timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
@@ -235,9 +237,11 @@ unsafe fn schedule() -> usize {
             || process.state == State::RUNNING
             || process.state == State::PREEMPTED
         {
-            if process.absolute_deadline < earliest_deadline {
-                pid = i;
-                earliest_deadline = process.absolute_deadline;
+            if process.deadline <= earliest_deadline {
+                if process.wcet < scheduler.processes[pid].wcet {
+                    pid = i;
+                    earliest_deadline = process.deadline;
+                }
             }
         }
     }
@@ -246,13 +250,13 @@ unsafe fn schedule() -> usize {
     }
     scheduler.current_process = pid;
 
-    conditional_hprint!(
+    info!(
         "F {} {}",
         MAX_PROCESSES + 1,
         timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
     );
     if pid == MAX_PROCESSES {
-        conditional_hprint!(
+        info!(
             "IDLE {}",
             timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay
         );
