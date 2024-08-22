@@ -18,3 +18,8 @@ To obtain the code execution logs, a probe can be used.
 ```shell
 probe-rs run --chip RP2040 target/thumbv6m-none-eabi/release/scheduler-edf-rs
 ```
+
+
+## Plot of the code
+
+The plots of the program can be plotted with [this code](https://github.com/adiscepo/scheduler_memoire_plot)
