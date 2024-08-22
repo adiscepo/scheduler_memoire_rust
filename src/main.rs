@@ -13,13 +13,14 @@ use rp_pico::{
     entry,
     hal::{
         self,
+        clocks::{self, init_clocks_and_plls, ClockSource},
         gpio::{
             bank0::{Gpio10, Gpio11, Gpio12},
             Pin, PushPullOutput,
         },
-        Sio,
+        Sio, Watchdog,
     },
-    pac,
+    pac, XOSC_CRYSTAL_FREQ,
 };
 
 // use cortex_m_semihosting::hprint;
@@ -33,6 +34,25 @@ static mut LED_PIN_T2: Option<Pin<Gpio12, PushPullOutput>> = None;
 fn main() -> ! {
     let mut pac = pac::Peripherals::take().unwrap();
     let sio = Sio::new(pac.SIO);
+
+    let mut watchdog = Watchdog::new(pac.WATCHDOG);
+
+    let clocks = init_clocks_and_plls(
+        XOSC_CRYSTAL_FREQ,
+        pac.XOSC,
+        pac.CLOCKS,
+        pac.PLL_SYS,
+        pac.PLL_USB,
+        &mut pac.RESETS,
+        &mut watchdog,
+    )
+    .ok()
+    .unwrap();
+
+    // Permet de redéfinir la fréquence de la clock. C'est étrange mais parfois le
+    // débuggeur (que cela soit par OpenOCD ou Probe-rs) rend le code très très lent.
+    clocks.system_clock.get_freq();
+    // info!("System clock frequency: {} Hz", sys_clock_freq);
 
     let pins = hal::gpio::Pins::new(
         pac.IO_BANK0,
@@ -50,7 +70,7 @@ fn main() -> ! {
 
     unsafe {
         Scheduler.init_scheduler();
-        Scheduler.create_process(3000, task0);
+        Scheduler.create_process(2500, task0);
         Scheduler.create_process(1000, task1);
         Scheduler.create_process(500, task2);
         info!("Task: {}", Scheduler.current_process);
@@ -71,7 +91,7 @@ fn task0() {
     }
 
     let mut i: u32 = 0;
-    while i < 9_000_000 {
+    while i < 10_000_000 {
         unsafe {
             ptr::write_volatile(&mut i, i + 1);
         }

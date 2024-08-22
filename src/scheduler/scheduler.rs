@@ -173,9 +173,9 @@ unsafe fn schedule() -> usize {
     let mut earliest_deadline: u32 = u32::MAX;
     let now = timer::to_ms(get_elapsed_time_since_boot()) - scheduler.delay;
     // info!("NOW : {}", now);
-    if now >= 10000 {
-        asm!("bkpt #0")
-    };
+    // if now >= 10000 {
+    //     asm!("bkpt #0")
+    // };
 
     for i in 0..MAX_PROCESSES {
         let process = &mut scheduler.processes[i];
