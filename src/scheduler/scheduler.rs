@@ -11,17 +11,6 @@ use rp_pico::pac;
 const PROCESS_STACK_SIZE: usize = 1024; // 1Kb
 const MAX_PROCESSES: usize = 3;
 
-// #[macro_export]
-// macro_rules! conditional_hprint {
-//     ($($arg:tt)*) => {
-//         #[cfg(debug_assertions)]
-//         {
-//             hprint!($($arg)*).unwrap();
-//             hprint!("\n").unwrap();
-//         }
-//     };
-// }
-
 #[derive(Copy, Clone, PartialEq)]
 #[repr(u8)]
 pub enum State {

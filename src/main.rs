@@ -13,7 +13,7 @@ use rp_pico::{
     entry,
     hal::{
         self,
-        clocks::{self, init_clocks_and_plls, ClockSource},
+        clocks::{init_clocks_and_plls, ClockSource},
         gpio::{
             bank0::{Gpio10, Gpio11, Gpio12},
             Pin, PushPullOutput,
@@ -151,8 +151,6 @@ fn task2() {
         );
         if let Some(led_pin) = LED_PIN_T2.as_mut() {
             led_pin.set_high().unwrap();
-        } else {
-            info!("NONEOENOENOENOENEONEOONE");
         }
     }
 
